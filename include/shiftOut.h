@@ -3,7 +3,14 @@
 #include "driver/gpio.h"
 #include "configuration.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+inline uint8_t sr_data;
+
 inline void shiftOut(uint8_t data) {
+    sr_data = data;
     for (uint8_t i = 8; i > 0; i--) {
         gpio_set_level(SR_DATA_PIN, ( ( data >> (i-1) ) & 0x01) );
         gpio_set_level(SR_BCLK_PIN, 1);
@@ -29,5 +36,10 @@ inline esp_err_t shiftOutInit() {
     gpio_set_level(SR_RCLK_PIN, 0);
     gpio_set_level(SR_DATA_PIN, 0);
 
-    shiftOut(0x00);
+    sr_data = 0x00;
+    shiftOut(sr_data);
 }
+
+#ifdef __cplusplus
+}
+#endif
