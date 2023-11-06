@@ -24,6 +24,7 @@
  */
 
 #include <Stepper.h>
+#include "freertos/FreeRTOS.h"
 
 //Recebe o pino de passo, direção, habilitação e se é para inverter o sentido do motor
 Stepper::Stepper(
@@ -35,11 +36,11 @@ Stepper::Stepper(
 
     //Inicializa os pinos
     stepPin = stepPinNumber;
-    dirPin =dirPinNumber;
+    dirPin = dirPinNumber;
     enablePin = enablePinNumber;
 
     //Desabilita o driver
-    shiftOut( sr_data | (0x01 << enablePin) );
+    disable();
 
     //Configura se o motor é invertido ou não
     inverted = invert;
@@ -47,7 +48,7 @@ Stepper::Stepper(
 
 Stepper::~Stepper() {
     //Desabilita o driver
-    shiftOut( sr_data | (0x01 << enablePin) );
+    disable();
 }
 
 //Executa um passo na direção definida

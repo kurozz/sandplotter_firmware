@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-inline uint8_t sr_data;
+inline volatile uint8_t sr_data;
 
 inline void shiftOut(uint8_t data) {
     sr_data = data;
@@ -21,7 +21,6 @@ inline void shiftOut(uint8_t data) {
 }
 
 inline esp_err_t shiftOutInit() {
-    //zero-initialize the config structure.
     gpio_config_t io_conf = {
         .pin_bit_mask = (1<<SR_BCLK_PIN) | (1<<SR_RCLK_PIN) | (1<<SR_DATA_PIN),
         .mode = GPIO_MODE_OUTPUT,
@@ -30,7 +29,10 @@ inline esp_err_t shiftOutInit() {
         .intr_type = GPIO_INTR_DISABLE
     };
     //configure GPIO with the given settings
-    return gpio_config(&io_conf);
+    esp_err_t err = gpio_config(&io_conf);
+    if (err != ESP_OK) {
+        return err;
+    }
 
     gpio_set_level(SR_BCLK_PIN, 0);
     gpio_set_level(SR_RCLK_PIN, 0);
@@ -38,6 +40,8 @@ inline esp_err_t shiftOutInit() {
 
     sr_data = 0x00;
     shiftOut(sr_data);
+
+    return err;
 }
 
 #ifdef __cplusplus
