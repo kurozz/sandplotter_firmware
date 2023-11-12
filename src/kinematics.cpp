@@ -218,7 +218,7 @@ void home() {
 	move(0.0, 0.0, HOMING_SPEED);
 
 	//Wait for endstop trigger
-	if (xSemaphoreTake(homingSemaphore, 30000/portTICK_PERIOD_MS) == pdFALSE) {
+	if (xSemaphoreTake(homingSemaphore, 60000/portTICK_PERIOD_MS) == pdFALSE) {
 		ESP_LOGE("home", "Movement timeout");
 		ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 	};
