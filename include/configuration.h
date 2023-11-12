@@ -28,6 +28,12 @@
 #define RHO_ENDSTOP_PIN		GPIO_NUM_36
 #define ENDSTOP_HOMING_DIR	0
 
+#define SD_MISO_PIN         GPIO_NUM_12
+#define SD_MOSI_PIN         GPIO_NUM_13
+#define SD_SCLK_PIN         GPIO_NUM_14
+#define SD_CS_PIN           GPIO_NUM_15
+#define SD_CD_PIN           GPIO_NUM_39
+
 /*
  * Mechanical Configurations
  */
@@ -38,9 +44,12 @@
 #define THETA_COMPENSATION_DIR 0
 
 #define RHO_LIMIT 138.0
-#define RHO_ENDSTOP_POSITION 9.0
+#define RHO_ENDSTOP_POSITION (9.0/RHO_LIMIT)
+
+#define MIN_RHO_FOR_SPEED_CALCULATION 10.0
 
 #define THETA_ENDSTOP_POSITION ((22.5-2.5)/180)*PI
+#define HOMING_SPEED 10.0
 
 /*
  * Advanced - Do not change if you don't know what you are doing
@@ -57,4 +66,7 @@
 
 #define THETA_RADIUS_COMPENSATION ((THETA_STEPS_PER_TURN*THETA_GEAR_RATIO)/RHO_STEPS_PER_TURN)
 
-#define MOVEMENT_QUEUE_LENGTH 64
+#define THETA_ENDSTOP_CLEARANCE (PI/6)
+#define RHO_ENDSTOP_CLEARANCE 0.2
+
+#define MOVEMENT_QUEUE_LENGTH 4

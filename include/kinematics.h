@@ -14,18 +14,19 @@
 extern QueueHandle_t moveQueue;
 
 typedef enum {
+	ERROR,
 	IDLE,
 	HOMING,
 	MOVING
-} StepperStatus_t;
+} KinematicsStatus_t;
 
 typedef struct {
 	float theta;
 	float rho;
-	float speed;
-} MoveBlock_t;
+} ThrPosition_t;
 
 void home();
+void move(float theta, float rho, float speed);
 void kinematicsSetup();
 float getThetaPosition();
 float getRhoPosition();
