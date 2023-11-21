@@ -309,7 +309,12 @@ void move(float theta, float rho, float speed) {
 	}
 
 	//Calculate rho step count
-	moveBlock.rho.steps = (deltaRho_mm*RHO_STEPS_PER_MM) + compensateTheta(moveBlock.theta.steps);
+	moveBlock.rho.steps = (deltaRho_mm*RHO_STEPS_PER_MM);
+	
+	lastCalculatedPos.theta = lastCalculatedPos.theta + moveBlock.theta.steps*THETA_RAD_PER_STEP;
+	lastCalculatedPos.rho = lastCalculatedPos.rho + (moveBlock.rho.steps*RHO_MM_PER_STEP)/RHO_LIMIT;
+
+	moveBlock.rho.steps += compensateTheta(moveBlock.theta.steps);
 
 	//Set rho movement directions
 	if (moveBlock.rho.steps < 0) {
@@ -333,9 +338,6 @@ void move(float theta, float rho, float speed) {
 	} else {
 		moveBlock.rho.delay_us = 0;
 	}
-
-	lastCalculatedPos.theta = theta;
-	lastCalculatedPos.rho = rho;
 	xQueueSend(moveQueue, &moveBlock, portMAX_DELAY);
 }
 
