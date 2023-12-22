@@ -5,6 +5,7 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_log.h"
+#include "esp_vfs.h"
 #include "configuration.h"
 #include "shiftOut.h"
 #include "kinematics.h"
@@ -19,6 +20,7 @@ led_strip_handle_t led_strip;
 
 extern "C" {
     void app_main(void);
+    void listFiles(bool &retFlag);
 }
 
 void mountSD() {
@@ -137,45 +139,85 @@ void app_main() {
 
     ThetaRho_Direction_t currentDirection = THR_DIR_NORMAL;
     ThetaRhoParser* thr;
-    float speed = 10.0;
+    float speed = 20.0;
 
+    ESP_LOGI(__FUNCTION__, "Opening playlist");
+    std::ifstream playlist;
+    playlist.open("/sd/playlist.txt", std::ifstream::in);
+    if (!playlist.is_open()) {
+        ESP_LOGE(__FUNCTION__, "Failed to open playlist file. Restarting.");
+        vTaskDelay(5000/portTICK_PERIOD_MS);
+        esp_restart();
+    }
+
+    char thrFileName[128];
     while (1) {
-        if (currentDirection == THR_DIR_NORMAL) {
-            thr = new ThetaRhoParser("/sd/s_spiral.thr", currentDirection);
+        if (!playlist.getline(thrFileName, 128)) {
+            ESP_LOGE(__FUNCTION__, "End of playlist, returning to first file.");
+            playlist.clear();
+            playlist.seekg(0, playlist.beg);
         } else {
-            thr = new ThetaRhoParser("/sd/s_stars.thr", currentDirection);
-        }
 
-        if (thr == nullptr || thr->isOpen() != THR_OK) {
-            ESP_LOGE(__FUNCTION__, "Failed to open .thr file");
-            esp_restart();
-        }
-
-        ESP_LOGI(__FUNCTION__, "Total lines: %ld", thr->getTotalLines());
-
-        float theta, rho;
-        if (thr->getNextCommand(&theta, &rho) == THR_OK) {
-            while(!setTheta(theta)) {
-                vTaskDelay(1000/portTICK_PERIOD_MS);
+            ESP_LOGI(__FUNCTION__, "Opening file %s", thrFileName);
+            char pathToFile[128] = "/sd/";
+            strcat(pathToFile, thrFileName);
+            if (currentDirection == THR_DIR_NORMAL) {
+                thr = new ThetaRhoParser(pathToFile, currentDirection);
+            } else {
+                thr = new ThetaRhoParser(pathToFile, currentDirection);
             }
-            move(theta, rho, speed);
-        } else {
-            ESP_LOGE(__FUNCTION__, "Failed to get first command");
-            esp_restart();
-        }
 
-        while (thr->getNextCommand(&theta, &rho) == THR_OK) {
-            ESP_LOGI(__FUNCTION__, "Line: %ld/%ld", thr->getCurrentLine(), thr->getTotalLines());
-            move(theta, rho, speed);
-        }
+            if (thr == nullptr || thr->isOpen() != THR_OK) {
+                ESP_LOGE(__FUNCTION__, "Failed to open .thr file");
+            } else {
+                ESP_LOGI(__FUNCTION__, "Total lines: %ld", thr->getTotalLines());
 
-        delete thr;
+                float theta, rho;
+                if (thr->getNextCommand(&theta, &rho) == THR_OK) {
+                    while(!setTheta(theta)) {
+                        vTaskDelay(1000/portTICK_PERIOD_MS);
+                    }
+                    move(theta, rho, speed);
+                } else {
+                    ESP_LOGE(__FUNCTION__, "Failed to get first command");
+                    esp_restart();
+                }
 
-        if (currentDirection == THR_DIR_NORMAL) {
-            currentDirection = THR_DIR_REVERSE;
-        } else {
-            currentDirection = THR_DIR_NORMAL;
+                while (thr->getNextCommand(&theta, &rho) == THR_OK) {
+                    ESP_LOGI(__FUNCTION__, "Line: %ld/%ld", thr->getCurrentLine(), thr->getTotalLines());
+                    move(theta, rho, speed);
+                }
+
+                delete thr;
+
+                if (currentDirection == THR_DIR_NORMAL) {
+                    currentDirection = THR_DIR_REVERSE;
+                } else {
+                    currentDirection = THR_DIR_NORMAL;
+                }
+            }
         }
     }
 }
 
+void listFiles()
+{
+    DIR *dir = opendir("/sd");
+    if (dir == NULL)
+    {
+        return;
+    }
+
+    while (true)
+    {
+        struct dirent *de = readdir(dir);
+        if (!de)
+        {
+            break;
+        }
+
+        printf("Found file: %s\n", de->d_name);
+    }
+
+    closedir(dir);
+}
