@@ -6,3 +6,6 @@
 .old
 .code-workspace
 .esp32dev.old
+src/sandplotter.code-workspace
+.vscode/settings.json
+sdkconfig.esp32dev.old
