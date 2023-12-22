@@ -51,7 +51,7 @@
 #define MIN_RHO_FOR_SPEED_CALCULATION 10.0
 
 #define THETA_ENDSTOP_POSITION ((22.5-2.5)/180)*PI
-#define HOMING_SPEED 10.0
+#define HOMING_SPEED 20.0
 
 /*
  * LED Configurations

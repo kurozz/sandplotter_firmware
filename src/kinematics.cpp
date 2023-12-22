@@ -173,7 +173,7 @@ void home() {
 	move(-2*PI, 1.0, HOMING_SPEED);
 
 	//Wait for endstop trigger
-	if (xSemaphoreTake(homingSemaphore, 30000/portTICK_PERIOD_MS) == pdFALSE) {
+	if (xSemaphoreTake(homingSemaphore, ((((2*PI*RHO_LIMIT*1000))/HOMING_SPEED)+5000)/portTICK_PERIOD_MS) == pdFALSE) {
 		ESP_LOGE(__FUNCTION__, "Movement timeout");
 		ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 	};
@@ -185,7 +185,7 @@ void home() {
 	//Go to the angle of the rho axis endstop
 	ESP_LOGI(__FUNCTION__, "Moving to rho endstop angle");
 	move(THETA_ENDSTOP_POSITION, 1.0, HOMING_SPEED);
-	if (xSemaphoreTake(homingSemaphore, 60000/portTICK_PERIOD_MS) == pdFALSE) {
+	if (xSemaphoreTake(homingSemaphore, ((((THETA_ENDSTOP_POSITION*RHO_LIMIT*1000))/HOMING_SPEED)+5000)/portTICK_PERIOD_MS) == pdFALSE) {
 		ESP_LOGE(__FUNCTION__, "Movement timeout");
 		ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 	};
@@ -200,7 +200,7 @@ void home() {
 		lastCalculatedPos.rho = 1.0-RHO_ENDSTOP_CLEARANCE;
 		move(0.0, 1.0, HOMING_SPEED);
 
-		if (xSemaphoreTake(homingSemaphore, 30000/portTICK_PERIOD_MS) == pdFALSE) {
+		if (xSemaphoreTake(homingSemaphore, (((RHO_LIMIT*1000)/HOMING_SPEED)+5000)/portTICK_PERIOD_MS) == pdFALSE) {
 			ESP_LOGE(__FUNCTION__, "Movement timeout");
 			ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 		};
