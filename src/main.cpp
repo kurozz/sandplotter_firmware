@@ -43,6 +43,17 @@ void mountSD() {
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.set_card_clk(host.slot, 1000);
 
+    //Configure endstop GPIO
+	gpio_config_t cs_conf = {
+        .pin_bit_mask = ((uint64_t)1<<SD_CS_PIN),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_NEGEDGE
+    };
+    ESP_ERROR_CHECK(gpio_config(&cs_conf));
+    gpio_set_level(SD_CS_PIN, 0);
+
     spi_bus_config_t bus_cfg = {
         .mosi_io_num = SD_MOSI_PIN,
         .miso_io_num = SD_MISO_PIN,
@@ -60,7 +71,7 @@ void mountSD() {
     // This initializes the slot without card detect (CD) and write protect (WP) signals.
     // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-    slot_config.gpio_cs = SD_CS_PIN;
+    slot_config.gpio_cs = SDSPI_SLOT_NO_CS;
     slot_config.host_id = (spi_host_device_t)host.slot;
 
     ESP_LOGI(__FUNCTION__, "Mounting filesystem");
@@ -82,13 +93,11 @@ void mountSD() {
     sdmmc_card_print_info(stdout, card);
 }
 
-void app_main() {
-    vTaskDelay(2000/portTICK_PERIOD_MS);
-
+void initLED() {
     /* LED strip initialization with the GPIO and pixels number*/
         led_strip_config_t strip_config = {
-        .strip_gpio_num = GPIO_NUM_22, // The GPIO that connected to the LED strip's data line
-        .max_leds = 60, // The number of LEDs in the strip,
+        .strip_gpio_num = LED_DATA_PIN, // The GPIO that connected to the LED strip's data line
+        .max_leds = LED_NUMBER, // The number of LEDs in the strip,
         .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
         .led_model = LED_MODEL_WS2812, // LED strip model
         .flags = {
@@ -109,6 +118,12 @@ void app_main() {
     #endif
     };
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
+}
+
+void app_main() {
+    vTaskDelay(2000/portTICK_PERIOD_MS);
+
+    initLED();
 
     for (int i = 0; i < 60; i++) {
         ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 12, 10, 10));
@@ -120,19 +135,47 @@ void app_main() {
     kinematicsSetup();
     home();
 
-    ThetaRhoParser thr("/sd/spiral.thr");
+    ThetaRho_Direction_t currentDirection = THR_DIR_NORMAL;
+    ThetaRhoParser* thr;
+    float speed = 10.0;
 
-    if (thr.isOpen() != THR_OK) {
-        ESP_LOGE(__FUNCTION__, "Failed to open .thr file");
-        esp_restart();
-    }
+    while (1) {
+        if (currentDirection == THR_DIR_NORMAL) {
+            thr = new ThetaRhoParser("/sd/s_spiral.thr", currentDirection);
+        } else {
+            thr = new ThetaRhoParser("/sd/s_stars.thr", currentDirection);
+        }
 
-    ESP_LOGI(__FUNCTION__, "Total lines: %ld", thr.getTotalLines());
+        if (thr == nullptr || thr->isOpen() != THR_OK) {
+            ESP_LOGE(__FUNCTION__, "Failed to open .thr file");
+            esp_restart();
+        }
 
-    float theta, rho;
-    while (thr.getNextCommand(&theta, &rho) == THR_OK) {
-        ESP_LOGI(__FUNCTION__, "Line: %ld/%ld", thr.getCurrentLine(), thr.getTotalLines());
-        move(theta, rho, 7.5);
+        ESP_LOGI(__FUNCTION__, "Total lines: %ld", thr->getTotalLines());
+
+        float theta, rho;
+        if (thr->getNextCommand(&theta, &rho) == THR_OK) {
+            while(!setTheta(theta)) {
+                vTaskDelay(1000/portTICK_PERIOD_MS);
+            }
+            move(theta, rho, speed);
+        } else {
+            ESP_LOGE(__FUNCTION__, "Failed to get first command");
+            esp_restart();
+        }
+
+        while (thr->getNextCommand(&theta, &rho) == THR_OK) {
+            ESP_LOGI(__FUNCTION__, "Line: %ld/%ld", thr->getCurrentLine(), thr->getTotalLines());
+            move(theta, rho, speed);
+        }
+
+        delete thr;
+
+        if (currentDirection == THR_DIR_NORMAL) {
+            currentDirection = THR_DIR_REVERSE;
+        } else {
+            currentDirection = THR_DIR_NORMAL;
+        }
     }
 }
 

@@ -12,9 +12,15 @@ typedef enum {
     THR_INVALID_LINE
 } ThetaRho_Error_t;
 
+typedef enum {
+    THR_DIR_NORMAL = 0,
+    THR_DIR_REVERSE
+} ThetaRho_Direction_t;
+
 class ThetaRhoParser {
 public:
     ThetaRhoParser(std::string path);
+    ThetaRhoParser(std::string path, ThetaRho_Direction_t reverse);
     ~ThetaRhoParser();
 
     ThetaRho_Error_t isOpen();
@@ -24,8 +30,12 @@ public:
 
 private:
     ThetaRho_Error_t countLines();
+    bool getLineReverse(char *line, uint32_t n);
+
     std::ifstream thrFile;
+    ThetaRho_Direction_t direction;
     uint32_t totalLines;
     uint32_t currentLine;
+    int32_t fileLength;
     const uint8_t LINE_BUFFER_LENGTH = 64;
 };

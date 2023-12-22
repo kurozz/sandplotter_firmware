@@ -34,6 +34,8 @@
 #define SD_CS_PIN           GPIO_NUM_15
 #define SD_CD_PIN           GPIO_NUM_39
 
+#define LED_DATA_PIN        GPIO_NUM_22
+
 /*
  * Mechanical Configurations
  */
@@ -50,6 +52,12 @@
 
 #define THETA_ENDSTOP_POSITION ((22.5-2.5)/180)*PI
 #define HOMING_SPEED 10.0
+
+/*
+ * LED Configurations
+ */
+
+#define LED_NUMBER 60
 
 /*
  * Advanced - Do not change if you don't know what you are doing
@@ -69,4 +77,4 @@
 #define THETA_ENDSTOP_CLEARANCE (PI/6)
 #define RHO_ENDSTOP_CLEARANCE 0.2
 
-#define MOVEMENT_QUEUE_LENGTH 4
+#define MOVEMENT_QUEUE_LENGTH 64

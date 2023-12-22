@@ -74,7 +74,7 @@ static void IRAM_ATTR endstopCallback(void* arg)
 
 static int32_t compensateTheta(int32_t steps) {
 	static int32_t compensationCounter = 0;
-	ESP_LOGD("compensateTheta", "Current counter: %ld", compensationCounter);
+	ESP_LOGD(__FUNCTION__, "Current counter: %ld", compensationCounter);
 
 	//Increment or decrement the counter according to the direction of theta movement
 	compensationCounter -= steps;
@@ -82,7 +82,7 @@ static int32_t compensateTheta(int32_t steps) {
 	int32_t stepsToCompensate = compensationCounter/THETA_RADIUS_COMPENSATION;
 	compensationCounter = compensationCounter-(stepsToCompensate*THETA_RADIUS_COMPENSATION);
 
-	ESP_LOGD("compensateTheta", "Steps to compensate: %ld, Compensation counter: %ld", stepsToCompensate, compensationCounter);
+	ESP_LOGD(__FUNCTION__, "Steps to compensate: %ld, Compensation counter: %ld", stepsToCompensate, compensationCounter);
 
 	return stepsToCompensate;
 }
@@ -136,7 +136,7 @@ void getPosition(ThrPosition_t *position) {
 }
 
 void home() {
-	ESP_LOGI("home", "Homing start");
+	ESP_LOGI(__FUNCTION__, "Homing start");
 
 	status = HOMING;
 	homingSemaphore = xSemaphoreCreateBinary();
@@ -149,11 +149,11 @@ void home() {
 
 	//Move out of the endstop if already triggered
 	if (!gpio_get_level(THETA_ENDSTOP_PIN)) {
-		ESP_LOGI("home", "Theta endstop already triggered. Moving out of theta endstop sensor");
+		ESP_LOGI(__FUNCTION__, "Theta endstop already triggered. Moving out of theta endstop sensor");
 		move(THETA_ENDSTOP_CLEARANCE, 1.0, HOMING_SPEED);
 
 		if (xSemaphoreTake(homingSemaphore, 10000/portTICK_PERIOD_MS) == pdFALSE) {
-			ESP_LOGE("home", "Movement timeout");
+			ESP_LOGE(__FUNCTION__, "Movement timeout");
 			ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 		};
 	}
@@ -164,7 +164,7 @@ void home() {
 	lastCalculatedPos.rho = 1.0;
 
 	//Home theta axis
-	ESP_LOGI("home", "Finding theta endstop");
+	ESP_LOGI(__FUNCTION__, "Finding theta endstop");
 
 	//Enable interrupt
     gpio_install_isr_service(0);
@@ -174,7 +174,7 @@ void home() {
 
 	//Wait for endstop trigger
 	if (xSemaphoreTake(homingSemaphore, 30000/portTICK_PERIOD_MS) == pdFALSE) {
-		ESP_LOGE("home", "Movement timeout");
+		ESP_LOGE(__FUNCTION__, "Movement timeout");
 		ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 	};
 	gpio_isr_handler_remove(THETA_ENDSTOP_PIN);
@@ -183,10 +183,10 @@ void home() {
 	lastCalculatedPos.theta = 0.0;
 
 	//Go to the angle of the rho axis endstop
-	ESP_LOGI("home", "Moving to rho endstop angle");
+	ESP_LOGI(__FUNCTION__, "Moving to rho endstop angle");
 	move(THETA_ENDSTOP_POSITION, 1.0, HOMING_SPEED);
 	if (xSemaphoreTake(homingSemaphore, 60000/portTICK_PERIOD_MS) == pdFALSE) {
-		ESP_LOGE("home", "Movement timeout");
+		ESP_LOGE(__FUNCTION__, "Movement timeout");
 		ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 	};
 
@@ -195,19 +195,19 @@ void home() {
 
 	//Move out of the endstop if already triggered
 	if (!gpio_get_level(RHO_ENDSTOP_PIN)) {
-		ESP_LOGI("home", "Rho endstop already triggered. Moving out of rho endstop sensor");
+		ESP_LOGI(__FUNCTION__, "Rho endstop already triggered. Moving out of rho endstop sensor");
 		currentPos.rho = 1.0-RHO_ENDSTOP_CLEARANCE;
 		lastCalculatedPos.rho = 1.0-RHO_ENDSTOP_CLEARANCE;
 		move(0.0, 1.0, HOMING_SPEED);
 
 		if (xSemaphoreTake(homingSemaphore, 30000/portTICK_PERIOD_MS) == pdFALSE) {
-			ESP_LOGE("home", "Movement timeout");
+			ESP_LOGE(__FUNCTION__, "Movement timeout");
 			ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 		};
 	}
 
 	//Home rho axis
-	ESP_LOGI("home", "Finding rho endstop");
+	ESP_LOGI(__FUNCTION__, "Finding rho endstop");
 
 	currentPos.rho = 1.0;
 	lastCalculatedPos.rho = 1.0;
@@ -219,7 +219,7 @@ void home() {
 
 	//Wait for endstop trigger
 	if (xSemaphoreTake(homingSemaphore, 60000/portTICK_PERIOD_MS) == pdFALSE) {
-		ESP_LOGE("home", "Movement timeout");
+		ESP_LOGE(__FUNCTION__, "Movement timeout");
 		ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 	};
 	gpio_isr_handler_remove(RHO_ENDSTOP_PIN);
@@ -228,18 +228,18 @@ void home() {
 	gpio_uninstall_isr_service();
 
 	//Move to zero
-	ESP_LOGI("home", "Returning to zero");
+	ESP_LOGI(__FUNCTION__, "Returning to zero");
 	currentPos.rho = RHO_ENDSTOP_POSITION;
 	lastCalculatedPos.rho = RHO_ENDSTOP_POSITION;
 
 	move(0.0, 0.0, HOMING_SPEED);
 
 	if (xSemaphoreTake(homingSemaphore, 10000/portTICK_PERIOD_MS) == pdFALSE) {
-		ESP_LOGE("home", "Movement timeout");
+		ESP_LOGE(__FUNCTION__, "Movement timeout");
 		ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 	};
 
-	ESP_LOGI("home", "Homing end");
+	ESP_LOGI(__FUNCTION__, "Homing end");
 
 	//Disable endstop interrupts
 	gpio_uninstall_isr_service();
@@ -258,29 +258,30 @@ void move(float theta, float rho, float speed) {
 	MoveBlock_t moveBlock;
 
 	if (status == ERROR) {
-		ESP_LOGE("move", "Plotter in invalid status (ERROR)");
+		ESP_LOGE(__FUNCTION__, "Plotter in invalid status (ERROR)");
 		return;
 	}
 
 	//Set rho limits
 	if (rho > 1.0) {
 		rho = 1.0;
-		ESP_LOGW("move", "Received rho > 1.0");
+		ESP_LOGW(__FUNCTION__, "Received rho > 1.0");
 	}
 
 	if (rho < 0.0) {
 		rho = 0.0;
-		ESP_LOGW("move", "Received rho < 0.0");
+		ESP_LOGW(__FUNCTION__, "Received rho < 0.0");
 	}
 
-	ESP_LOGI("move", "Move from (t%f, r%f) to (t%f, r%f)", lastCalculatedPos.theta, lastCalculatedPos.rho, theta, rho);
+	int queueUsage = uxQueueMessagesWaiting(moveQueue);
+	ESP_LOGI(__FUNCTION__, "Move from (t%f, r%f) to (t%f, r%f), Buffer (%d/%d)", lastCalculatedPos.theta, lastCalculatedPos.rho, theta, rho, queueUsage, MOVEMENT_QUEUE_LENGTH);
 
 	//Get relative movement
 	float deltaTheta = theta-lastCalculatedPos.theta;
 	float deltaRho = rho-lastCalculatedPos.rho;
 
 	if (deltaTheta == 0.0 && deltaRho == 0.0) {
-		ESP_LOGW("move", "Tried to perform zero distance move");
+		ESP_LOGW(__FUNCTION__, "Tried to perform zero distance move");
 		return;
 	}
 
@@ -291,7 +292,7 @@ void move(float theta, float rho, float speed) {
 	float deltaT;
 	float rhoConst = (lastCalculatedPos.rho*RHO_LIMIT) + deltaRho_mm/2; //Used as the radius of the theta movement
 	if ( rhoConst < MIN_RHO_FOR_SPEED_CALCULATION) {
-		ESP_LOGD("move", "Radius smaller than %fmm, using r = %fmm for speed calculation", MIN_RHO_FOR_SPEED_CALCULATION, MIN_RHO_FOR_SPEED_CALCULATION);
+		ESP_LOGD(__FUNCTION__, "Radius smaller than %fmm, using r = %fmm for speed calculation", MIN_RHO_FOR_SPEED_CALCULATION, MIN_RHO_FOR_SPEED_CALCULATION);
 		deltaT = sqrt( (pow(deltaRho_mm, 2) + pow(deltaTheta, 2)*pow(MIN_RHO_FOR_SPEED_CALCULATION, 2))/pow(speed, 2) );
 	} else {
 		deltaT = sqrt( (pow(deltaRho_mm, 2) + pow(deltaTheta, 2)*pow(rhoConst, 2))/pow(speed, 2) );
@@ -358,8 +359,8 @@ static void moveTask (void* arg) {
 			currentBlock.rho.dir = moveBlock.rho.dir;
 			currentBlock.rho.delay_us = moveBlock.rho.delay_us;
 
-			ESP_LOGD("moveTask", "Theta s/d/t: (%ld,%d,%lu)", currentBlock.theta.steps, currentBlock.theta.dir, currentBlock.theta.delay_us);
-			ESP_LOGD("moveTask", "Rho s/d/t, (%ld,%d,%lu)", currentBlock.rho.steps, currentBlock.rho.dir, currentBlock.rho.delay_us);
+			ESP_LOGD(__FUNCTION__, "Theta s/d/t: (%ld,%d,%lu)", currentBlock.theta.steps, currentBlock.theta.dir, currentBlock.theta.delay_us);
+			ESP_LOGD(__FUNCTION__, "Rho s/d/t, (%ld,%d,%lu)", currentBlock.rho.steps, currentBlock.rho.dir, currentBlock.rho.delay_us);
 
 			//Setup timers
 			gptimer_alarm_config_t alarm_config;
@@ -448,5 +449,17 @@ void kinematicsSetup() {
 	ESP_ERROR_CHECK(gptimer_register_event_callbacks(rhoStepperTimer, &cbs, NULL));
 	ESP_ERROR_CHECK(gptimer_enable(rhoStepperTimer));
 
-	xTaskCreate(moveTask, "MoveTask", 4096, NULL, 10, NULL);
+	xTaskCreate(moveTask, __FUNCTION__, 4096, NULL, 10, NULL);
+}
+
+bool setTheta(float theta) {
+	if (uxQueueMessagesWaiting(moveQueue) > 0) {
+		ESP_LOGE(__FUNCTION__, "Can't set theta if movements are ongoing");
+		return false;
+	}
+
+	currentPos.theta = theta;
+	lastCalculatedPos.theta = theta;
+
+	return true;
 }
