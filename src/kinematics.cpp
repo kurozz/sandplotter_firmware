@@ -27,6 +27,7 @@ typedef struct {
 } StepBlock_t;
 
 typedef struct {
+	ThrPosition_t pos;
 	StepBlock_t theta;
 	StepBlock_t rho;
 } MoveBlock_t;
@@ -315,6 +316,9 @@ void move(float theta, float rho, float speed) {
 	lastCalculatedPos.theta = lastCalculatedPos.theta + moveBlock.theta.steps*THETA_RAD_PER_STEP;
 	lastCalculatedPos.rho = lastCalculatedPos.rho + (moveBlock.rho.steps*RHO_MM_PER_STEP)/RHO_LIMIT;
 
+	moveBlock.pos.theta = lastCalculatedPos.theta;
+	moveBlock.pos.rho = lastCalculatedPos.rho;
+
 	moveBlock.rho.steps += compensateTheta(moveBlock.theta.steps);
 
 	//Set rho movement directions
@@ -350,6 +354,15 @@ static void moveTask (void* arg) {
 			//Take idle semaphores to make sure no movement is ongoing
 			xSemaphoreTake(thetaIdleSemaphore, portMAX_DELAY);
 			xSemaphoreTake(rhoIdleSemaphore, portMAX_DELAY);
+
+			//Get current position
+			currentPos.theta = currentBlock.pos.theta;
+			currentPos.rho = currentBlock.pos.rho;
+			ESP_LOGD(__FUNCTION__, "Current position: (%f, %f)", currentPos.theta, currentPos.rho);
+
+			//Set the new movement block
+			currentBlock.pos.theta = moveBlock.pos.theta;
+			currentBlock.pos.rho = moveBlock.pos.rho;
 
 			currentBlock.theta.steps = moveBlock.theta.steps;
 			currentBlock.theta.dir = moveBlock.theta.dir;
@@ -448,6 +461,9 @@ void kinematicsSetup() {
 	};
 	ESP_ERROR_CHECK(gptimer_register_event_callbacks(rhoStepperTimer, &cbs, NULL));
 	ESP_ERROR_CHECK(gptimer_enable(rhoStepperTimer));
+
+	currentBlock.pos.theta = 0.0;
+	currentBlock.pos.rho = 0.0;
 
 	xTaskCreate(moveTask, __FUNCTION__, 4096, NULL, 10, NULL);
 }
