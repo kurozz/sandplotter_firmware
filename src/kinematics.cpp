@@ -171,10 +171,10 @@ void home() {
     gpio_install_isr_service(0);
     gpio_isr_handler_add(THETA_ENDSTOP_PIN, endstopCallback, (void*) THETA_ENDSTOP_PIN);	
 
-	move(-2*PI, 1.0, HOMING_SPEED);
+	move(-2*M_PI, 1.0, HOMING_SPEED);
 
 	//Wait for endstop trigger
-	if (xSemaphoreTake(homingSemaphore, ((((2*PI*RHO_LIMIT*1000))/HOMING_SPEED)+5000)/portTICK_PERIOD_MS) == pdFALSE) {
+	if (xSemaphoreTake(homingSemaphore, ((((2*M_PI*RHO_LIMIT*1000))/HOMING_SPEED)+5000)/portTICK_PERIOD_MS) == pdFALSE) {
 		ESP_LOGE(__FUNCTION__, "Movement timeout");
 		ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
 	};
@@ -291,7 +291,9 @@ void move(float theta, float rho, float speed) {
 
 	//Calculate time required to execute movement
 	float deltaT;
-	float rhoConst = (lastCalculatedPos.rho*RHO_LIMIT) + deltaRho_mm/2; //Used as the radius of the theta movement
+
+	//Used as the radius of the theta movement
+	float rhoConst = (lastCalculatedPos.rho*RHO_LIMIT) + deltaRho_mm/2;
 	if ( rhoConst < MIN_RHO_FOR_SPEED_CALCULATION) {
 		ESP_LOGD(__FUNCTION__, "Radius smaller than %fmm, using r = %fmm for speed calculation", MIN_RHO_FOR_SPEED_CALCULATION, MIN_RHO_FOR_SPEED_CALCULATION);
 		deltaT = sqrt( (pow(deltaRho_mm, 2) + pow(deltaTheta, 2)*pow(MIN_RHO_FOR_SPEED_CALCULATION, 2))/pow(speed, 2) );
@@ -465,7 +467,7 @@ void kinematicsSetup() {
 	currentBlock.pos.theta = 0.0;
 	currentBlock.pos.rho = 0.0;
 
-	xTaskCreate(moveTask, __FUNCTION__, 4096, NULL, 10, NULL);
+	xTaskCreatePinnedToCore(moveTask, __FUNCTION__, 4096, NULL, configMAX_PRIORITIES-2 , NULL, 0);
 }
 
 bool setTheta(float theta) {

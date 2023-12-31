@@ -27,5 +27,6 @@ typedef struct {
 
 void home();
 void move(float theta, float rho, float speed);
+void getPosition(ThrPosition_t *position);
 void kinematicsSetup();
 bool setTheta(float theta);
