@@ -12,11 +12,9 @@
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
 #include "ThetaRhoParser.h"
-#include "led_strip.h"
+#include "LEDStrip.h"
 
 #define MOUNT_POINT "/sd"
-
-led_strip_handle_t led_strip;
 
 extern "C" {
     void app_main(void);
@@ -44,6 +42,7 @@ void mountSD() {
     // Example: for fixed frequency of 10MHz, use host.max_freq_khz = 10000;
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.set_card_clk(host.slot, 1000);
+    host.slot = VSPI_HOST;
 
     //Configure endstop GPIO
 	gpio_config_t cs_conf = {
@@ -95,42 +94,30 @@ void mountSD() {
     sdmmc_card_print_info(stdout, card);
 }
 
-void initLED() {
-    /* LED strip initialization with the GPIO and pixels number*/
-        led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_DATA_PIN, // The GPIO that connected to the LED strip's data line
-        .max_leds = LED_NUMBER, // The number of LEDs in the strip,
-        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
-        .led_model = LED_MODEL_WS2812, // LED strip model
-        .flags = {
-            .invert_out = false // whether to invert the output signal (useful when your hardware has a level inverter)
-        }
-    };
-
-    led_strip_rmt_config_t rmt_config = {
-    #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-        .rmt_channel = 0,
-    #else
-        .clk_src = RMT_CLK_SRC_DEFAULT, // different clock source can lead to different power consumption
-        .resolution_hz = 10 * 1000 * 1000, // 10MHz
-        .mem_block_symbols = 0,
-        .flags = {
-            .with_dma = false // whether to enable the DMA feature
-        }
-    #endif
-    };
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
-}
-
 void app_main() {
     vTaskDelay(2000/portTICK_PERIOD_MS);
 
-    initLED();
+    LEDColor_t fgColor = {
+        .r = 255,
+        .g = 0,
+        .b = 0,
+        .brightness = 0.5
+    };
 
-    for (int i = 0; i < 60; i++) {
-        ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 12, 10, 10));
+    LEDColor_t bgColor = {
+        .r = 0,
+        .g = 255,
+        .b = 255,
+        .brightness = 0.06
+    };
+
+    if (ledInit(LED_DATA_PIN, LED_COUNT) != ESP_OK) {
+        ESP_LOGE(__FUNCTION__, "Failed to init LEDs. Restarting.");
+        vTaskDelay(5000/portTICK_PERIOD_MS);
+        esp_restart();
     }
-    ESP_ERROR_CHECK(led_strip_refresh(led_strip));
+    //ESP_ERROR_CHECK(ledSetColor(color));
+    ledFollowerStart(fgColor, bgColor, (25.0/LED_COUNT)*2*M_PI);
 
     mountSD();
 

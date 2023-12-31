@@ -54,7 +54,7 @@
  * LED Configurations
  */
 
-#define LED_NUMBER 60
+#define LED_COUNT 60
 
 /*
  * Advanced - Do not change if you don't know what you are doing
